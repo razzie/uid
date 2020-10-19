@@ -30,29 +30,45 @@ func NewGenerator(bits int) *Generator {
 
 // UID ...
 func (gen *Generator) UID() string {
-	dictSize := int64(len(gen.Dictionary))
-	bitsPerWord := big.NewInt(dictSize).BitLen()
-	wordCount, remainingBits := gen.Bits/bitsPerWord, gen.Bits%bitsPerWord
+	maxWord := int64(len(gen.Dictionary))
+	bitsPerWord := big.NewInt(maxWord).BitLen()
+	var wordCount, remainingBits int
+
+	if bitsPerWord > gen.Bits {
+		wordCount, remainingBits = 1, 0
+		max := big.NewInt(0)
+		max.SetBit(max, gen.Bits, 1)
+		maxWord = max.Int64()
+	} else {
+		wordCount, remainingBits = gen.Bits/bitsPerWord, gen.Bits%bitsPerWord
+	}
 
 	words := make([]string, wordCount)
 	for i := range words {
-		word, err := rand.Int(gen.RandomSource, big.NewInt(dictSize))
+		word, err := rand.Int(gen.RandomSource, big.NewInt(maxWord))
 		if err != nil {
 			panic(err)
 		}
 		words[i] = gen.Dictionary[int(word.Uint64())]
 	}
 
-	remainingMax := big.NewInt(0)
-	remainingMax.SetBit(remainingMax, remainingBits, 1)
-	remaining, err := rand.Int(gen.RandomSource, remainingMax)
-	if err != nil {
-		panic(err)
+	if remainingBits > 0 {
+		remainingMax := big.NewInt(0)
+		remainingMax.SetBit(remainingMax, remainingBits, 1)
+		remaining, err := rand.Int(gen.RandomSource, remainingMax)
+		if err != nil {
+			panic(err)
+		}
+
+		remainingBytes := make([]byte, (remainingBits+7)/8)
+		remaining.FillBytes(remainingBytes)
+
+		return fmt.Sprintf("%s-%s",
+			strings.Join(words, "-"),
+			hex.EncodeToString(remainingBytes))
 	}
 
-	return fmt.Sprintf("%s-%s",
-		strings.Join(words, "-"),
-		hex.EncodeToString(remaining.Bytes()))
+	return strings.Join(words, "-")
 }
 
 // UID ...
