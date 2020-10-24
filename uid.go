@@ -35,10 +35,7 @@ func (gen *Generator) UID() string {
 	var wordCount, remainingBits int
 
 	if bitsPerWord > gen.Bits {
-		wordCount, remainingBits = 1, 0
-		max := big.NewInt(0)
-		max.SetBit(max, gen.Bits, 1)
-		maxWord = max.Int64()
+		wordCount, remainingBits = 0, gen.Bits
 	} else {
 		wordCount, remainingBits = gen.Bits/bitsPerWord, gen.Bits%bitsPerWord
 	}
@@ -63,9 +60,12 @@ func (gen *Generator) UID() string {
 		remainingBytes := make([]byte, (remainingBits+7)/8)
 		remaining.FillBytes(remainingBytes)
 
-		return fmt.Sprintf("%s-%s",
-			strings.Join(words, "-"),
-			hex.EncodeToString(remainingBytes))
+		if len(words) > 0 {
+			return fmt.Sprintf("%s-%s",
+				strings.Join(words, "-"),
+				hex.EncodeToString(remainingBytes))
+		}
+		return hex.EncodeToString(remainingBytes)
 	}
 
 	return strings.Join(words, "-")
